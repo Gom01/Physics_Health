@@ -1,0 +1,1 @@
+case class Grid(width: Int = 100, height: Int = 100)
