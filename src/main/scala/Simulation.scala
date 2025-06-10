@@ -5,13 +5,18 @@ object Simulation {
     actors.map(act => act.move(velocity, grid, rand))
   }
 
+  
+  def timer(actors : List[Actor]) : List[Actor] = {
+    actors.map(actor => actor.copy(timer = actor.timer - 1))
+  }
+
   //Calculates the distance between 2 actors
   def distance(a1: Actor, a2: Actor): Double = {
     val dx = a1.posX - a2.posX
     val dy = a1.posY - a2.posY
     math.sqrt(dx * dx + dy * dy)
   }
-
+  
   // Based on all the actors create all the interactions (new actors)
   def interactions_actors(
                            actors: List[Actor],
@@ -21,12 +26,20 @@ object Simulation {
                            reward: Double, 
                            punishment: Double, 
                            sucker: Double,
-                           temptation: Double 
+                           temptation: Double,
+                           influence : Double
                          ): List[Actor] = {
     // Going through all the actors
     actors.map { actor =>
-      // Checking all its neighbors within the interaction range
-      val neighbors = actors.filter(other => other != actor && distance(actor, other) <= range)
+      // Determine interaction range depending on influence
+      val actualRange = if (actor.isInfluencer) {
+        range * influence
+      } else {
+        range
+      }
+      val neighbors = actors.filter(other =>
+        other != actor && distance(actor, other) <= actualRange
+      )
 
       // Go through all the neighbors and calculate their score (begin with current actor)
       val interacted = neighbors.foldLeft(actor) {

@@ -1,5 +1,5 @@
-case class Actor(posX: Double, posY: Double, cooperate : Boolean, score : Double = 0) {
-  val radius = 4
+case class Actor(id: Int, posX: Double, posY: Double, cooperate: Boolean, score: Double = 0, isInfluencer : Boolean =false, influence:Double = 0, timer: Int) {
+val radius : Int = 4
 
   def interact(other: Actor, reward: Double, punishment: Double, sucker: Double, temptation: Double): Actor = {
     (this.cooperate, other.cooperate) match {
@@ -10,11 +10,10 @@ case class Actor(posX: Double, posY: Double, cooperate : Boolean, score : Double
     }
   }
 
-
   //Copy other strategy if more successful (depending on the proba [0-1])
   def copy_strategy(other: Actor, probability: Double, rand: scala.util.Random): Actor = {
-    if (other.score > score && rand.nextDouble() < probability)
-      Actor(posX, posY, other.cooperate, score)
+    if (other.score > score && rand.nextDouble() < probability && this.timer > 0)
+      Actor(this.id,this.posX, this.posY, other.cooperate, this.score, this.isInfluencer, this.influence, this.timer)
     else
       this
   }
@@ -26,6 +25,7 @@ case class Actor(posX: Double, posY: Double, cooperate : Boolean, score : Double
       else if (pos > max) max
       else pos
     }
+
     // Choose a random direction
     val theta = rand.nextDouble() * 2 * math.Pi
     // Random distance (based on direction)
@@ -33,6 +33,6 @@ case class Actor(posX: Double, posY: Double, cooperate : Boolean, score : Double
     val dy = velocity * math.sin(theta)
     val newX = inBounds(posX + dx, radius.toDouble, grid.width.toDouble - radius)
     val newY = inBounds(posY + dy, radius.toDouble, grid.height.toDouble - radius)
-    Actor(newX, newY, cooperate, score)
+    Actor(this.id, newX, newY, this.cooperate, this.score, this.isInfluencer, this.influence, this.timer)
   }
 }
