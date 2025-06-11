@@ -47,6 +47,7 @@ object SimulationUI extends JFXApp3 {
       prefWidth = 250
     }
 
+
     val influence: Double = 3.0
     val btnStart = new Button("Start simulation")
     val labelClusterCount = new Label("Clusters: 0")
