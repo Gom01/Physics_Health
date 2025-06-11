@@ -39,7 +39,7 @@ object SimulationUI extends JFXApp3 {
     val sliderVelocity = new Slider(0.1, 10.0, 2.0) { showTickLabels = true; prefWidth = 250 }
     val sliderImitation = new Slider(0, 100, 50) { showTickLabels = true; prefWidth = 250 }
     val sliderRange = new Slider(1, 100, 10) { showTickLabels = true; prefWidth = 250 }
-    val sliderTimer = new Slider(1, 10000, 500) {showTickLabels = true; prefWidth = 250}
+    val sliderTimer = new Slider(1, 1500, 2000) { showTickLabels = true; showTickMarks = true; majorTickUnit = 5000; blockIncrement = 1000; prefWidth = 250 }
     val sliderTemptation = new Slider(1.1, 1.99, 1.5) {
       showTickLabels = true
       showTickMarks = true
@@ -49,20 +49,20 @@ object SimulationUI extends JFXApp3 {
 
     val influence: Double = 3.0
     val btnStart = new Button("Start simulation")
+    val labelClusterCount = new Label("Clusters: 0")
 
     def drawActors(): Unit = {
       gc.fill = Color.White
       gc.fillRect(0, 0, canvasWidth, canvasHeight)
       val baseRange = sliderRange.value.value
 
-      val clusters = actors.groupBy(_.cooperate).values.flatMap { group =>
-        group.groupBy(a => a.isInfluencer).values
-      }.toList.map(_.toSet)
+      val clusters = Simulation.findClusters(actors, baseRange)
+      labelClusterCount.text = s"Clusters: ${clusters.size}"
 
       val updatedColorMap = clusters.map { cluster =>
         val idSet = cluster.map(_.id)
         val isCoop = cluster.head.cooperate
-        val color = clusterColorMap.getOrElse(idSet, randomColor(isCoop))
+        val color = randomColor(isCoop)
         idSet -> color
       }.toMap
       clusterColorMap = updatedColorMap
@@ -86,8 +86,8 @@ object SimulationUI extends JFXApp3 {
     }
 
     def randomColor(isCoop: Boolean): Color = {
-      if (isCoop) Color.rgb(rand.nextInt(100), 150 + rand.nextInt(106), rand.nextInt(100))
-      else Color.rgb(150 + rand.nextInt(106), rand.nextInt(100), rand.nextInt(100))
+      if (isCoop) Color.rgb(0, 100 + rand.nextInt(156), 0)
+      else Color.rgb(150 + rand.nextInt(106), 0, 0)
     }
 
     def initActors(n: Int, coopRate: Double, influencerCoop: Int, influencerDefect: Int): List[Actor] = {
@@ -109,7 +109,7 @@ object SimulationUI extends JFXApp3 {
           cooperate = isCoop,
           isInfluencer = isInfluencer,
           influence = if (isInfluencer) influence else 1.0,
-          timer = (sliderTimer.value.value).toInt
+          timer = sliderTimer.value.value.toInt
         )
       }.toList
     }
@@ -119,12 +119,12 @@ object SimulationUI extends JFXApp3 {
         val velocity = sliderVelocity.value.value
         val imitationProb = sliderImitation.value.value / 100.0
         val transmissionRadius = sliderRange.value.value
+        val resetValue = sliderTimer.value.value.toInt
         val r = 1.0; val p = 0.5; val s = 0.0; val t = sliderTemptation.value.value
 
         val moved = Simulation.actors_move(actors, grid, velocity, rand)
         val timed = Simulation.timer(moved)
-        actors = Simulation.interactions_actors(timed, imitationProb, transmissionRadius, rand, r, p, s, t, influence)
-
+        actors = Simulation.interactions_actors(timed, imitationProb, transmissionRadius, rand, r, p, s, t, influence, resetValue)
 
         if (actors.nonEmpty) {
           val coopCount = actors.count(_.cooperate)
@@ -167,7 +167,8 @@ object SimulationUI extends JFXApp3 {
         new Label("Range (radius) :"), sliderRange,
         new Label("Temptation (T) - you defect, they cooperate:"), sliderTemptation,
         new Label("Timer (frames)"), sliderTimer,
-        btnStart
+        btnStart,
+        labelClusterCount
       )
     }
 

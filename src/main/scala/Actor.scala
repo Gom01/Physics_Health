@@ -11,12 +11,13 @@ val radius : Int = 4
   }
 
   //Copy other strategy if more successful (depending on the proba [0-1])
-  def copy_strategy(other: Actor, probability: Double, rand: scala.util.Random): Actor = {
+  def copy_strategy(other: Actor, probability: Double, rand: scala.util.Random, resetValue: Int = 10000): Actor = {
     if (other.score > score && rand.nextDouble() < probability && this.timer > 0)
-      Actor(this.id,this.posX, this.posY, other.cooperate, this.score, this.isInfluencer, this.influence, this.timer)
+      this.copy(cooperate = other.cooperate, timer = resetValue)
     else
       this
   }
+
 
   def move(velocity: Double, grid: Grid, rand: scala.util.Random): Actor = {
     // Return only valid position (inside borders)
