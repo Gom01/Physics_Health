@@ -28,7 +28,9 @@ My model helps explore:
 
 ### 🎥 Simulation Video
 
-[▶️ Click here to watch the demo video](/src/main/python/video/simulation.mp4)
+![Demo Animation](/src/main/python/video/simulation.gif)
+
+[▶️ Click here to get the full demo video](/src/main/python/video/simulation.mp4)
 
 ## 📁 Project Files
 
