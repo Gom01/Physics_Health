@@ -62,10 +62,15 @@ Writes results from the simulation into `.csv` files for analysis.
 
 Provides a graphical interface to run a single simulation. It shows moving agents and a graph of cooperation over time, including sliders to change parameters.
 
+### `Python files .py`
+
+These files allowed me to show the results by creating graphs.
+
 ## ▶️ How to Run
 
 ### Run the real-time UI simulation 
-``` sbt run ```
+1. ``` sbt run ```
+2.``` Enter number: 2 ``` 
 
 
 ## 📸 Screenshots & Results
