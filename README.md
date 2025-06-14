@@ -69,8 +69,8 @@ These files allowed me to show the results by creating graphs.
 ## ▶️ How to Run
 
 ### Run the real-time UI simulation 
-1. ``` sbt run ```
-2.``` Enter number: 2 ``` 
+* ``` sbt run ```
+* ``` Enter number: 2 ``` 
 
 
 ## 📸 Screenshots & Results
