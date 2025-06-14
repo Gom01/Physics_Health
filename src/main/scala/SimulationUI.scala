@@ -1,3 +1,4 @@
+// SimulationUI: A graphical interface to run and visualize actor-based cooperation simulation
 import scalafx.application.JFXApp3
 import scalafx.scene.Scene
 import scalafx.scene.paint.Color
@@ -7,19 +8,24 @@ import scalafx.scene.layout.{VBox, BorderPane, StackPane}
 import scalafx.scene.chart.{LineChart, NumberAxis, XYChart}
 import scalafx.animation.AnimationTimer
 import scalafx.geometry.Insets
-
 import scala.util.Random
 
+
 object SimulationUI extends JFXApp3 {
+  // Simulation canvas/grid settings
   val canvasWidth = 400
   val canvasHeight = 400
   val grid = Grid(canvasWidth, canvasHeight)
+
+  // Simulation state variables
   var actors: List[Actor] = List.empty
   val rand = new Random()
   var isRunning = false
   var timeStep = 0
 
   override def start(): Unit = {
+
+    // Line chart setup for tracking cooperation/defection over time
     val timeAxis = new NumberAxis("Time", 0, 1000, 100)
     val percentAxis = new NumberAxis("Percentage (%)", 0, 100, 10)
     val lineChart = new LineChart[Number, Number](timeAxis, percentAxis)
@@ -28,38 +34,44 @@ object SimulationUI extends JFXApp3 {
     val defectSeries = new XYChart.Series[Number, Number] { name = "Defectors" }
     lineChart.data.value.addAll(coopSeries, defectSeries)
 
+    // Canvas for drawing actors on the grid
     val canvas = new Canvas(canvasWidth, canvasHeight)
     val gc: GraphicsContext = canvas.graphicsContext2D
-    var clusterColorMap = Map[Set[Int], Color]()
+    var clusterColorMap = Map[Set[Int], Color]() // Assigns colors to clusters
 
-    val sliderActors = new Slider(0, 5000, 900) { showTickLabels = true; prefWidth = 250 }
+    // UI controls (sliders and fields for parameters)
+    val sliderActors = new Slider(0, 5000, 1000) { showTickLabels = true; prefWidth = 250 }
     val fieldInfluencerCoop = new TextField { promptText = "# cooperative"; text = "2"; prefWidth = 100 }
     val fieldInfluencerDefect = new TextField { promptText = "# defectors"; text = "3"; prefWidth = 100 }
-    val sliderCoop = new Slider(0, 100, 69) { showTickLabels = true; prefWidth = 250 }
+    val sliderCoop = new Slider(0, 100, 50) {
+      showTickLabels = true; showTickMarks = true
+      majorTickUnit = 1
+      prefWidth = 250
+    }
     val sliderVelocity = new Slider(0.1, 10.0, 2.0) { showTickLabels = true; prefWidth = 250 }
     val sliderImitation = new Slider(0, 100, 50) { showTickLabels = true; prefWidth = 250 }
     val sliderRange = new Slider(1, 100, 10) { showTickLabels = true; prefWidth = 250 }
     val sliderTimer = new Slider(1, 1500, 2000) { showTickLabels = true; showTickMarks = true; majorTickUnit = 5000; blockIncrement = 1000; prefWidth = 250 }
     val sliderTemptation = new Slider(1.1, 1.99, 1.5) {
-      showTickLabels = true
-      showTickMarks = true
+      showTickLabels = true; showTickMarks = true
       majorTickUnit = 0.5
       prefWidth = 250
     }
 
-
-    val influence: Double = 3.0
+    val influence: Double = 3.0 // Influence multiplier for influencers
     val btnStart = new Button("Start simulation")
-    val labelClusterCount = new Label("Clusters: 0")
+    val labelClusterCount = new Label("Clusters: 0") // Shows number of clusters on screen
 
+    // Draws all actors and their clusters
     def drawActors(): Unit = {
       gc.fill = Color.White
       gc.fillRect(0, 0, canvasWidth, canvasHeight)
-      val baseRange = sliderRange.value.value
 
+      val baseRange = sliderRange.value.value
       val clusters = Simulation.findClusters(actors, baseRange)
       labelClusterCount.text = s"Clusters: ${clusters.size}"
 
+      // Assign a consistent random color to each cluster
       val updatedColorMap = clusters.map { cluster =>
         val idSet = cluster.map(_.id)
         val isCoop = cluster.head.cooperate
@@ -68,6 +80,7 @@ object SimulationUI extends JFXApp3 {
       }.toMap
       clusterColorMap = updatedColorMap
 
+      // Draw each actor based on its cluster and cooperation status
       for ((cluster, color) <- clusters.zip(clusters.map(c => updatedColorMap(c.map(_.id))))) {
         gc.fill = color
         cluster.foreach { a =>
@@ -79,6 +92,7 @@ object SimulationUI extends JFXApp3 {
         }
       }
 
+      // Optionally draw perception range circles
       actors.foreach { a =>
         val range = baseRange * (if (a.isInfluencer) influence else 1.0)
         gc.stroke = if (a.isInfluencer) Color.DarkBlue else Color.rgb(150, 150, 150, 0.2)
@@ -86,11 +100,13 @@ object SimulationUI extends JFXApp3 {
       }
     }
 
+    // Random color depending on whether the actor is a cooperator or defector
     def randomColor(isCoop: Boolean): Color = {
       if (isCoop) Color.rgb(0, 100 + rand.nextInt(156), 0)
       else Color.rgb(150 + rand.nextInt(106), 0, 0)
     }
 
+    // Initializes actors with specified cooperation rate and influencers
     def initActors(n: Int, coopRate: Double, influencerCoop: Int, influencerDefect: Int): List[Actor] = {
       val influencerCount = influencerCoop + influencerDefect
       val influencerIds = rand.shuffle(0 until n).take(influencerCount).toList
@@ -115,6 +131,7 @@ object SimulationUI extends JFXApp3 {
       }.toList
     }
 
+    // Main animation loop (called once per frame)
     val timer = AnimationTimer { _ =>
       if (isRunning) {
         val velocity = sliderVelocity.value.value
@@ -127,6 +144,7 @@ object SimulationUI extends JFXApp3 {
         val timed = Simulation.timer(moved)
         actors = Simulation.interactions_actors(timed, imitationProb, transmissionRadius, rand, r, p, s, t, influence, resetValue)
 
+        // Update graph
         if (actors.nonEmpty) {
           val coopCount = actors.count(_.cooperate)
           val coopPercent = 100.0 * coopCount / actors.length
@@ -142,11 +160,13 @@ object SimulationUI extends JFXApp3 {
       }
     }
 
+    // Handles button click to start a new simulation run
     btnStart.onAction = _ => {
       val count = sliderActors.value.value.toInt
       val coopRate = sliderCoop.value.value / 100.0
       val influencerCoop = fieldInfluencerCoop.text.value.toIntOption.getOrElse(0)
       val influencerDefect = fieldInfluencerDefect.text.value.toIntOption.getOrElse(0)
+
       actors = initActors(count, coopRate, influencerCoop, influencerDefect)
       coopSeries.data().clear()
       defectSeries.data().clear()
@@ -155,33 +175,31 @@ object SimulationUI extends JFXApp3 {
       timer.start()
     }
 
+    // Layout: control panel and graph on the right, simulation canvas on the left
     val controlPanel = new VBox {
-      spacing = 10
+      spacing = 0
       padding = Insets(10)
       children = Seq(
-        new Label("Actors :"), sliderActors,
         new Label("Influencer Cooperative (n) :"), fieldInfluencerCoop,
         new Label("Influencer Defectors (n) :"), fieldInfluencerDefect,
         new Label("Cooperation (%) :"), sliderCoop,
         new Label("Speed :"), sliderVelocity,
-        new Label("Change strategy (%) :"), sliderImitation,
-        new Label("Range (radius) :"), sliderRange,
         new Label("Temptation (T) - you defect, they cooperate:"), sliderTemptation,
-        new Label("Timer (frames)"), sliderTimer,
         btnStart,
         labelClusterCount
       )
     }
 
     val rightPane = new VBox {
-      spacing = 20
+      spacing = 10
       padding = Insets(10)
       children = Seq(controlPanel, lineChart)
     }
 
+    // Window setup
     stage = new JFXApp3.PrimaryStage {
       title = "Simulation"
-      scene = new Scene(canvasWidth + 250, canvasHeight + 100) {
+      scene = new Scene(canvasWidth + 220, canvasHeight + 80) {
         root = new BorderPane {
           left = new StackPane {
             children = canvas

@@ -1,40 +1,22 @@
 object Main {
   def main(args: Array[String]): Unit = {
-    SimulationUI.main(args)
-    //BatchExperiment.run()
+    
+    //Creation of the base of simulation
+    val runner_influencer = new BatchSimulation(
+      velocity = 2,
+      temptation = 1.5,
+      cooperation = 0.5,
+      repeats = 3,
+      steps = 800,
+      range = 10,
+      imitation = 0.5,
+      timer = 10000,
+      numActors = 1000,
+      influencerCoop = 6,
+      influencerDefect = 0,
+      influenceMultiplier = 3.0
+    )
+    val experiments_influencer = new SimulationExperiments(runner_influencer)
+    experiments_influencer.runAll()
   }
 }
- 
-
-
-
-
-
-  //Do clusters of non-compliance(defectors) form ?
-    // Oui je peux directement les voir dans la simu
-   //Utiliser les différents paramètre pour vérifier (trouver les phases)
-  //Can they persist over time even when surrounded by cooperators ?
-  //Autres idée ajouter une personne ou plusieurs avec de plus grands range
-  //Après un certains nombre de steps ils ne change plus d'idées
-
-  //Taux de vaccination en suisse = 68.77%
-  //https://www.rts.ch/info/dossiers/2020/l-epidemie-de-coronavirus/12210226-la-vaccination-contre-le-covid19-en-chiffres-et-en-cartes.html
-  //Densité d'habitant en suisse par km^2 = 219
-  //Grille de 400px (taille suisse 41285km^2) -> 56.3 habitants / pixels^2 
-  // 900 agents chaque agent représente 10'000 personnes
-
-
-  //Autres graphes physiques transitions
-  //Physique :
-  //tx cooperation vs tx cooperation (fixed actors and percentage)
-  //tentation vs tx cooperation (fixed actors and percentage)
-  //velocity vs tx cooperation (fixed actors and percentage)
-  //tx cooperation vs cooperation percentage
-
-  //Find clusters:
-  // Counts numbers of clusters
-
-
-  //Programmation fonctionnelle:
-  // Threads
-  // Part of my code (simulation or actor)

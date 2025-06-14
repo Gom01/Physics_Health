@@ -1,81 +1,95 @@
 import java.io.{File, PrintWriter}
-import java.util.concurrent.Executors
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
 
-class BatchSimulation(
-                       val velocity: Double,
-                       val temptation: Double,
-                       val cooperation: Double,
-                       val repeats: Int,
-                       val steps: Int,
-                       val range: Double,
-                       val imitation: Double,
-                       val timer: Int,
-                       val numActors: Int
-                     )
-{
+//Class which allows me to combine the results of multiples simulations (varying a specific parameter)
+class BatchSimulation(val velocity: Double, val temptation: Double, val cooperation: Double, val repeats: Int, val steps: Int, val range: Double, val imitation: Double, val timer: Int, val numActors: Int, val influencerCoop: Int, val influencerDefect: Int, val influenceMultiplier: Double) {
   val grid = Grid(400, 400)
 
-  // This buildActors is a helper for general actor creation
-  def buildActors(coopInit: Double, rand: Random): List[Actor] = {
-    (0 until numActors).map { i =>
-      val isCoop = rand.nextDouble() < coopInit
-      Actor(i, rand.nextDouble() * grid.width, rand.nextDouble() * grid.height, isCoop, timer=timer)
-    }.toList
+  //Creation of the grid of actors
+  def buildActors(rand: Random, coopInit: Double): List[Actor] = {
+    Simulation.initActors(
+      n = numActors,
+      coopRate = coopInit,
+      influencerCoop = influencerCoop,
+      influencerDefect = influencerDefect,
+      grid = grid,
+      rand = rand,
+      timerDuration = timer,
+      influenceMultiplier = influenceMultiplier
+    )
   }
 
+
+  // Runs multiple simulations varying a single parameter (gives some values)(give grid of actors)
   def runVarying[T](
-                     values: Seq[T], // Sequence of values for the parameter being varied
+                     values: Seq[T], // Varying values (temptation, velocity, actors)
                      filename: String,
-                     label: String, // Label for console output (e.g., "InitialCoop", "Temptation", "Velocity")
-                     // Function to create initial actors for a given `param` and `Random` instance
-                     buildInitialActors: (Random, T) => List[Actor],
-                     // Function to perform one simulation step, using `param` as the varying input
-                     simulateStep: (List[Actor], Random, T) => List[Actor],
-                     extractX: T => Double, // Function to convert the `param` to a Double for the x-axis in CSV
-                     fixedInfo: String // A string describing the fixed parameters for the CSV header/data
+                     label: String, // Which parameter is being varied
+                     buildInitialActors: (Random, T) => List[Actor], // Grid of actors (initial state)
+                     extractX: T => Double, // Convert value into double
+                     fixedInfo: String // Info which stays the same (CSV)
+                   )(
+                     stepFunction: (List[Actor], Random, T) => List[Actor] // Step of simulation (create new list of actors)
                    ): Unit = {
-    val threadPool = Executors.newFixedThreadPool(8)
-    implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(threadPool)
 
-    try {
-      val futures = values.map { param =>
-        Future {
-          val averages = (1 to repeats).map { _ =>
-            val rand = new Random()
-            var actors = buildInitialActors(rand, param) // Initialize actors, potentially using 'param'
+    val seed = 42 //Seed used so that my simulation is always the same (position of actors when varying values
 
-            val coopHistory = scala.collection.mutable.ListBuffer.empty[Double]
+    val writer = new CSVWriter(filename)
+    writer.writeHeader()
 
-            for (_ <- 0 until steps) {
-              actors = simulateStep(actors, rand, param) // Perform simulation step, passing 'param'
-              val coopRate = 100.0 * actors.count(_.cooperate) / numActors
-              coopHistory.append(coopRate)
-            }
+    // Loop over each value of the parameter being varied
+    values.foreach { v =>
+      println(s"Running for $label = $v")
 
-            // Average cooperation rate over the last 100 steps
-            coopHistory.takeRight(100).sum / 100
-          }
+      // Run multiple repetitions and collect cooperation & cluster averages
+      val (coopResults, clusterResults) = (1 to repeats).map { r =>
+        println(s"  Repetition $r")
+        val rand = new Random(seed + r)
 
-          val average = averages.sum / repeats
-          println(f"$label ${extractX(param)}%1.2f → Moyenne: $average%2.2f")
-          (extractX(param), average) // Tuple (x_value, final_coop)
+        // Build initial list of actors
+        val initialActors = buildInitialActors(rand, v)
+
+        // Simulate 'steps' time steps
+        val evolvedActors = (0 until steps).foldLeft(initialActors) { (currentActors, step) =>
+          if (step % 100 == 0) println(s"    Step $step")
+          stepFunction(currentActors, rand, v)
         }
-      }
-      val results = Await.result(Future.sequence(futures), Duration.Inf).sortBy(_._1)
 
-      val writer = new PrintWriter(new File(filename))
-      // Adjust CSV header to be more descriptive based on the varying parameter and fixed info
-      writer.println(s"varying_param_value,final_coop,${fixedInfo.replace("=", "_")}") // Replaces '=' for valid CSV header
-      results.foreach { case (x, finalC) =>
-        writer.println(s"$x,$finalC,$fixedInfo") // Write fixed info to data row
-      }
-      writer.close()
-      println(s"Results written to $filename")
-    } finally {
-      threadPool.shutdown()
+        // Add 50 steps and collect cooperation and cluster stats.
+        val last50Stats = (0 until 50).foldLeft((evolvedActors, List.empty[(Double, Double)])) {
+          case ((actorsAcc, statsAcc), _) => //(Current list of actors, stats collected)
+            val updatedActors = stepFunction(actorsAcc, rand, v)
+            val coopPercent = 100.0 * updatedActors.count(_.cooperate) / updatedActors.length //get percentage
+            val clusters = Simulation.findClusters(updatedActors, range).size.toDouble //get number of cluster
+            (updatedActors, statsAcc :+ (coopPercent, clusters))
+        }._2
+
+        val (coops, clusters) = last50Stats.unzip
+        val avgCoop = coops.sum / coops.length
+        val avgClusters = clusters.sum / clusters.length
+        (avgCoop, avgClusters) 
+      }.unzip //list of %cooperators and number of clusters 
+
+      // Average across repetitions (multiple simulations)
+      val avgCoopOverall = coopResults.sum / coopResults.length
+      val avgClustersOverall = clusterResults.sum / clusterResults.length
+      val xValue = extractX(v)
+
+      // Write the result for this parameter value to CSV
+      writer.writeLine(
+        varyingParam = xValue,
+        avgCoop = avgCoopOverall,
+        avgClusters = avgClustersOverall,
+        influencerCoop = influencerCoop,
+        influencerDefect = influencerDefect,
+        steps = steps,
+        velocity = velocity,
+        imitation = imitation,
+        range = range,
+        temptation = temptation
+      )
     }
+    writer.close()
+    println(s"Finished all runs → $filename")
   }
 }
