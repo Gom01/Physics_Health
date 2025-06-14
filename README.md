@@ -28,7 +28,7 @@ My model helps explore:
 
 ### 🎥 Simulation Video
 
-[▶️ Click here to watch the demo video](/src/main/python/video/simulation.mkv)
+[▶️ Click here to watch the demo video](/src/main/python/video/simulation.mp4)
 
 ## 📁 Project Files
 
@@ -79,12 +79,18 @@ These files allowed me to show the results by creating graphs.
 
 This chart shows how the percentage of cooperators evolves when starting with different initial cooperation rates.
 
+![Initial Cooperation](/src/main/python/images/cooperation_results.png)
+
 ### 🔥 Temptation Varying
 
 This chart displays how varying the temptation parameter affects the final level of cooperation and the number of behavioral clusters.
 
+![Temptation](/src/main/python/images/temptation_results.png)
+
 ### 📊 Velocity Impact
 
 You can also test how agent speed influences interactions and cooperation.
+
+![Velocity](/src/main/python/images/velocity_results.png)
 
 > More results and interpretations will be shown during the demonstration.
