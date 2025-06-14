@@ -64,4 +64,22 @@ Provides a graphical interface to run a single simulation. It shows moving agent
 
 ## ▶️ How to Run
 
-### Run the real-time UI simulation
+### Run the real-time UI simulation 
+``` sbt run ```
+
+
+## 📸 Screenshots & Results
+
+### 📈 Initial Cooperation Varying Over Time
+
+This chart shows how the percentage of cooperators evolves when starting with different initial cooperation rates.
+
+### 🔥 Temptation Varying
+
+This chart displays how varying the temptation parameter affects the final level of cooperation and the number of behavioral clusters.
+
+### 📊 Velocity Impact
+
+You can also test how agent speed influences interactions and cooperation.
+
+> More results and interpretations will be shown during the demonstration.
